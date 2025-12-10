@@ -2,7 +2,6 @@
 
 name: Android CI/CD Deployment
 
-# Der Workflow startet bei jedem Push auf den 'main' oder 'develop' Branch
 on:
   push:
     branches: [ "main", "develop" ]
@@ -11,27 +10,36 @@ on:
 
 jobs:
   build_apk:
-    runs-on: ubuntu-latest # Führt den Job auf einem frischen Linux-Server aus
+    runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4 # 1. Quellcode auschecken
+      - uses: actions/checkout@v4
+
+      # NEUER SCHRITT: Dekodiert das Secret und erstellt die google-services.json
+      - name: Decode and Write Google Services File
+        env:
+          # Greift auf das Secret zu, das wir gerade erstellt haben
+          GOOGLE_SERVICES_JSON_B64: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          echo "Decoding google-services.json from secret..."
+          # Dekodiert die Base64-Zeichenkette und schreibt sie in die erwartete Datei
+          echo $GOOGLE_SERVICES_JSON_B64 | base64 -d > app/google-services.json
+          ls app/ 
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4 # 2. Java-Umgebung für Android-Build einrichten
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: 'gradle'
 
       - name: Grant execute permission for gradlew
-        run: chmod +x gradlew # 3. Berechtigung für das Gradle-Skript geben
+        run: chmod +x gradlew
 
-      # 4. Build-Schritt: Erstellt die DEBUG-APK
-      # Wir nutzen 'assembleDebug', da dies kein aufwändiges Signieren benötigt.
+      # Dieser Schritt sollte jetzt erfolgreich sein, da die Datei existiert
       - name: Build Debug APK
         run: ./gradlew assembleDebug
 
-      # 5. Artefakt hochladen (Das ist das Deployment)
       - name: Upload Debug APK Artifact to GitHub
         uses: actions/upload-artifact@v4
         with:
