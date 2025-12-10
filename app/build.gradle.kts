@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("com.google.gms.google-services")
+    // Add the Performance Monitoring Gradle plugin
+    id("com.google.firebase.firebase-perf")
 }
 
 android {
@@ -75,9 +77,29 @@ dependencies {
     implementation( "androidx.compose.material:material-icons-extended")
 
     // Firebase
-    implementation(platform("com.google.firebase:firebase-bom:33.1.2"))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
 
     implementation("androidx.navigation:navigation-compose:2.7.5") // Oder neueste Version
+
+
+    // Import the BoM for the Firebase platform
+    implementation(platform("com.google.firebase:firebase-bom:34.6.0"))
+
+    // Add the dependency for the Performance Monitoring library
+    // When using the BoM, you don't specify versions in Firebase library dependencies
+    implementation("com.google.firebase:firebase-perf")
+
+    // Unit Testing
+    testImplementation("junit:junit:4.13.2") // Oder eine neuere Version
+    testImplementation("org.mockito:mockito-core:5.10.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
+
+    // Kotlin Test (für saubere Syntax)
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit")
+
+    // Optional, aber nützlich für LiveData/Flows in Tests
+    testImplementation("androidx.arch.core:core-testing:2.2.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+
 }

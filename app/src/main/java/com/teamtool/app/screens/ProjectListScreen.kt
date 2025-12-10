@@ -25,7 +25,17 @@ import com.teamtool.app.MainActivity
 import com.teamtool.app.data.project.Project
 import com.teamtool.app.viewmodel.ProjectListViewModel
 import com.teamtool.app.viewmodel.UserViewModel
+import android.app.Activity
+import android.content.ContextWrapper
+import android.content.Context
 
+
+// Füge diese Funktion irgendwo in ProjectListScreen.kt außerhalb des Composables ein
+fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProjectListScreen(
@@ -36,20 +46,25 @@ fun ProjectListScreen(
     onNavigateToCreateProject: () -> Unit
 ) {
     // 1. ZUSTÄNDE VOM PROJECT-VIEWMODEL
-    // Flows beobachten (WICHTIG: initialValue setzen!)
     val projects by viewModel.projects.collectAsStateWithLifecycle(initialValue = emptyList())
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle(initialValue = false)
 
-    // FIX: Diese Zeile fehlte in deinem Code, wurde aber unten verwendet!
+    // HIER wird der Context geholt und für die Activity-Suche verwendet.
+    val context = LocalContext.current // <<-- Erste und korrekte Deklaration
+    val activity = context.findActivity()
+
     val projectListErrorMessage by viewModel.errorMessage.collectAsStateWithLifecycle(initialValue = null)
 
     // 2. ZUSTÄNDE VOM USER-VIEWMODEL
-    // Hier ist der initiale Wert wichtig, da UserViewModel ein User? liefert
     val currentUser by userViewModel.currentUser.collectAsStateWithLifecycle(initialValue = null)
     val userErrorMessage by userViewModel.errorMessage.collectAsStateWithLifecycle(initialValue = null)
 
     val snackbarHostState = remember { SnackbarHostState() }
-    val context = LocalContext.current
+
+    // !!! DIESE ZEILE HAT DEN FEHLER VERURSACHT UND WIRD ENTFERNT !!!
+    // val context = LocalContext.current
+    // !!! -------------------------------------------------------- !!!
+
 
     // Lädt die Projekte, wenn der Screen zum ersten Mal sichtbar wird
     LaunchedEffect(Unit) {
@@ -88,6 +103,7 @@ fun ProjectListScreen(
                     IconButton(
                         onClick = {
                             userViewModel.logout(onSuccess = {
+                                // 'context' wird korrekt verwendet
                                 val intent = Intent(context, MainActivity::class.java)
                                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                                 context.startActivity(intent)
@@ -127,6 +143,16 @@ fun ProjectListScreen(
                     Button(onClick = onNavigateToCreateProject, modifier = Modifier.padding(top = 16.dp)) {
                         Text("Jetzt Projekt erstellen")
                     }
+                    // Auch im Empty State ist ein Backup möglich!
+                    Spacer(modifier = Modifier.height(32.dp))
+                    Button(onClick = {
+                        // Sicherer Aufruf der Funktion
+                        if (activity is MainActivity) {
+                            activity.triggerBackup()
+                        }
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Text("⚙️ Backup zu OneDrive starten")
+                    }
                 }
 
                 // 4. Anzeige der Projekte (SUCCESS)
@@ -134,13 +160,27 @@ fun ProjectListScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Optionaler Header
+                    // OPTIONALER HEADER MIT BACKUP-BUTTON
                     item {
-                        Text(
-                            text = "Hallo ${currentUser?.name ?: "Gast"}, hier sind deine Projekte:",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
+                        Column(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                            Text(
+                                text = "Hallo ${currentUser?.name ?: "Gast"}, hier sind deine Projekte:",
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // *** HIER IST DER BUTTON KORREKT PLATZIERT ***
+                            Button(onClick = {
+                                if (activity is MainActivity) {
+                                    activity.triggerBackup()
+                                }
+                            }, modifier = Modifier.fillMaxWidth()) {
+                                Text("Backup zu OneDrive starten")
+                            }
+                            // **********************************************
+
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
                     }
 
                     // Die eigentliche Projektliste
